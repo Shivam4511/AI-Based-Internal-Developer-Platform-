@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDP Platform — Interact</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <style>
+        /* Simplified Chat Layout */
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 16px 24px;
+            background: rgba(5, 10, 20, 0.9);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+        }
+
+        .back-btn {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .back-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+            height: calc(100vh - 70px);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .chat-input-area {
+            padding: 24px;
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-light);
+        }
+
+        /* Message Bubbles */
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .chat-message.assistant {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .chat-bubble {
+            padding: 12px 16px;
+            border-radius: var(--radius-lg);
+            font-size: 15px;
+            line-height: 1.5;
+            position: relative;
+        }
+
+        .chat-message.user .chat-bubble {
+            background: var(--accent-blue);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.assistant .chat-bubble {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Changes Card */
+        .file-change-card {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-top: 12px;
+        }
+
+        .file-change-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+
+        .change-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .change-badge.modified {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .change-badge.created {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 12px;
+            text-decoration: none;
+        }
+
+        /* Context Selector */
+        .context-chip {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            padding: 4px 12px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="chat-header">
+        <a href="/static/index.html" class="back-btn">
+            <span>←</span> Back to Home
+        </a>
+        <div style="font-weight: 600;">IDP Chat — AI Architect</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <select id="codebase-select" onchange="handleCodebaseChange(this.value)"
+                style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-input); color: white; outline: none; max-width: 200px; font-family: inherit;">
+                <option value="">Select Context...</option>
+            </select>
+        </div>
+    </header>
+
+    <main class="chat-main">
+        <div class="chat-messages" id="messages">
+            <div class="chat-message assistant">
+                <div class="chat-bubble">
+                    Hello! I'm ready to help. Select an uploaded project above to give me context, or just ask general
+                    questions!
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+                <textarea id="input" placeholder="Ask me to modify your code..." rows="1"
+                    oninput="autoResize(this)"></textarea>
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-javascript.min.js"></script>
+
+    <!-- Inline simple API logic to avoid dependency on app.js sidebar stuff -->
+    <script>
+        const API_BASE = window.location.origin;
+        let codebaseId = new URLSearchParams(window.location.search).get('codebase');
+
+        async function init() {
+            // Load codebases for dropdown
+            try {
+                const res = await fetch(`${API_BASE}/api/upload/codebases`);
+                if (res.ok) {
+                    const list = await res.json();
+                    const select = document.getElementById('codebase-select');
+
+                    list.forEach(cb => {
+                        const opt = document.createElement('option');
+                        opt.value = cb.id;
+                        opt.textContent = cb.project_name;
+                        select.appendChild(opt);
+                    });
+
+                    // Auto-select if in URL
+                    if (codebaseId) {
+                        if (list.some(cb => cb.id === codebaseId)) {
+                            select.value = codebaseId;
+                        } else {
+                            // Codebase ID in URL but not in backend (server restart?)
+                            console.warn('Codebase from URL not found in backend');
+                            codebaseId = null; // Reset
+                            // Maybe add a persistent option anyway so user knows?
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load codebases", e);
+            }
+
+            // Handle enter key
+            document.getElementById('input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        function handleCodebaseChange(val) {
+            codebaseId = val;
+            const msg = val ? `Switched context to: ${val}` : "Context cleared - Standard Chat";
+            // Optional: notify user in chat? No, just let them know via UI state.
+
+            // Update URL so refresh keeps it?
+            if (val) {
+                const url = new URL(window.location);
+                url.searchParams.set('codebase', val);
+                window.history.pushState({}, '', url);
+            } else {
+                const url = new URL(window.location);
+                url.searchParams.delete('codebase');
+                window.history.pushState({}, '', url);
+            }
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            appendMessage('user', text);
+            input.value = '';
+            input.style.height = 'auto';
+
+            const typingId = showTyping();
+
+            try {
+                const payload = { message: text };
+                if (codebaseId) payload.codebase_id = codebaseId;
+
+                const res = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                removeTyping(typingId);
+                appendAssistantResponse(data);
+
+            } catch (err) {
+                removeTyping(typingId);
+                appendMessage('assistant', 'Error connecting to server.');
+            }
+        }
+
+        function appendMessage(role, text) {
+            const msgs = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `chat-message ${role}`;
+            div.innerHTML = `<div class="chat-bubble animate-in">${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+            msgs.appendChild(div);
+            msgs.scrollTo(0, msgs.scrollHeight);
+        }
+
+        function showTyping() {
+            const msgs = document.getElementById('messages');
+            const id = 'typing-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'chat-message assistant';
+            div.innerHTML = `<div class="chat-bubble typing-indicator"><span>.</span><span>.</span><span>.</span></div>`;
+            msgs.appendChild(div);
+            msgs.scrollTo(0, msgs.scrollHeight);
+            return id;
+        }
+
+        function removeTyping(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function appendAssistantResponse(data) {
+            const msgs = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'chat-message assistant';
+
+            let html = `<div class="chat-bubble animate-in">`;
+
+            if (data.explanation) html += `<p>${marked(data.explanation)}</p>`;
+
+            if (data.changes && data.changes.length > 0) {
+                html += `<div class="file-change-card">
+                            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📝 Generated Changes:</div>`;
+                data.changes.forEach(c => {
+                    const badgeClass = c.action === 'created' ? 'created' : 'modified';
+                    html += `<div class="file-change-item">
+                                <span class="change-badge ${badgeClass}">${c.action.toUpperCase()}</span>
+                                <span>${c.file}</span>
+                             </div>`;
+                });
+                html += `</div>`;
+            }
+
+            if (codebaseId && data.files && Object.keys(data.files).length > 0) {
+                html += `<a href="/api/upload/codebases/${codebaseId}/download" class="download-btn" target="_blank">
+                            📥 Download Modified Code (ZIP)
+                         </a>`;
+            }
+
+            if (data.files && Object.keys(data.files).length > 0) {
+                Object.entries(data.files).forEach(([filename, content]) => {
+                    const lang = getLangFromExt(filename);
+                    html += `<div class="code-block-wrapper" style="margin-top:12px;">
+                                <div class="code-header" style="background:#1e293b;padding:8px 12px;border-top-left-radius:6px;border-top-right-radius:6px;font-size:12px;color:#cbd5e1;">${filename}</div>
+                                <pre style="margin:0;border-bottom-left-radius:6px;border-bottom-right-radius:6px;"><code class="language-${lang}">${escapeHtml(content)}</code></pre>
+                              </div>`;
+                });
+            }
+
+            html += `</div>`;
+            div.innerHTML = html;
+            msgs.appendChild(div);
+            Prism.highlightAllUnder(div);
+            msgs.scrollTo(0, msgs.scrollHeight);
+        }
+
+        function getLangFromExt(filename) {
+            if (filename.endsWith('.py')) return 'python';
+            if (filename.endsWith('.js')) return 'javascript';
+            if (filename.endsWith('.html')) return 'html';
+            return 'clike';
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function marked(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`(.*?)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:4px;">$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

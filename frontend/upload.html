@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Upload your codebase for AI-powered analysis and context-aware code generation.">
+    <title>IDP Platform — Upload Codebase</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <style>
+        .upload-zone {
+            border: 2px dashed var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            background: var(--gradient-card);
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+            box-shadow: var(--shadow-glow-blue);
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .upload-zone h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-list {
+            margin-top: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            background: var(--bg-card);
+            margin-bottom: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .file-item .file-size {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .file-item .file-remove {
+            background: none;
+            border: none;
+            color: var(--accent-red);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 6px;
+        }
+
+        .upload-form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: flex-end;
+        }
+
+        .upload-form-row .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color var(--transition-fast);
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .codebase-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            transition: all var(--transition-normal);
+        }
+
+        .codebase-card:hover {
+            border-color: var(--border-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .analysis-section {
+            margin-top: 16px;
+        }
+
+        .pattern-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            background: rgba(59, 130, 246, 0.1);
+            font-size: 12px;
+            font-weight: 500;
+            margin: 4px;
+        }
+
+        .lang-bar {
+            display: flex;
+            border-radius: var(--radius-full);
+            overflow: hidden;
+            height: 8px;
+            background: var(--bg-input);
+            margin: 8px 0;
+        }
+
+        .lang-bar-segment {
+            height: 100%;
+            transition: width var(--transition-slow);
+        }
+
+        .progress-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            backdrop-filter: blur(4px);
+        }
+
+        .progress-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 40px;
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .progress-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-light);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-layout" id="app"></div>
+
+    <!-- Analysis Modal -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal" style="max-width:800px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Codebase Analysis</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const appEl = document.getElementById('app');
+        let selectedFiles = [];
+
+        async function init() {
+            appEl.innerHTML = renderSidebar('upload') + `
+                <main class="main-content">
+                    <header class="page-header">
+                        <h1>📤 Upload Codebase</h1>
+                        <div class="header-actions">
+                            <span class="text-secondary" style="font-size:13px;">Train AI on your code</span>
+                        </div>
+                    </header>
+                    <div class="page-body">
+                        <!-- Upload Section -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h2>📁 Upload Your Codebase</h2>
+                            </div>
+                            <div class="card-body">
+                                <div class="upload-form-row">
+                                    <div class="form-group">
+                                        <label>Project Name *</label>
+                                        <input type="text" id="project-name" placeholder="e.g. my-api-service">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Description</label>
+                                        <input type="text" id="project-desc" placeholder="Brief description of the codebase">
+                                    </div>
+                                </div>
+
+                                <div class="upload-zone" id="upload-zone">
+                                    <input type="file" id="file-input" multiple 
+                                        accept=".py,.js,.ts,.tsx,.jsx,.go,.rs,.java,.html,.css,.scss,.json,.yaml,.yml,.md,.txt,.sh,.sql,.tf,.toml,.xml,.dockerfile,.env,.gitignore,.cfg,.ini,.csv"
+                                        onchange="handleFileSelect(event)">
+                                    <span class="upload-icon">📂</span>
+                                    <h3>Drop files here or click to browse</h3>
+                                    <p>Supports Python, JavaScript, TypeScript, Go, Java, and more</p>
+                                    <p style="font-size:12px;color:var(--text-muted);margin-top:8px;">Select multiple files or an entire folder</p>
+                                </div>
+
+                                <div class="file-list" id="file-list" style="display:none;"></div>
+
+                                <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+                                    <button class="btn btn-primary" id="upload-btn" onclick="uploadCodebase()" disabled>
+                                        📤 Upload & Index Codebase
+                                    </button>
+                                    <button class="btn btn-ghost" id="clear-btn" onclick="clearFiles()" style="display:none;">
+                                        🗑️ Clear
+                                    </button>
+                                    <span id="file-count" class="text-muted" style="font-size:13px;"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Uploaded Codebases -->
+                        <h3 class="fw-600 mb-2" style="font-size:16px;">📚 Uploaded Codebases</h3>
+                        <div id="codebases-grid" class="projects-grid">
+                            <div class="text-muted" style="padding:40px;text-align:center;grid-column:1/-1;">
+                                No codebases uploaded yet. Upload your first codebase above!
+                            </div>
+                        </div>
+                    </div>
+                </main>`;
+
+            // Drag and drop events
+            const zone = document.getElementById('upload-zone');
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                const dt = e.dataTransfer;
+                if (dt.files.length) {
+                    addFiles(Array.from(dt.files));
+                }
+            });
+
+            loadCodebases();
+        }
+
+        function handleFileSelect(e) {
+            addFiles(Array.from(e.target.files));
+        }
+
+        function addFiles(newFiles) {
+            // Filter out already-selected files
+            const existing = new Set(selectedFiles.map(f => f.name));
+            const filtered = newFiles.filter(f => !existing.has(f.name));
+            selectedFiles = [...selectedFiles, ...filtered];
+            renderFileList();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        function clearFiles() {
+            selectedFiles = [];
+            document.getElementById('file-input').value = '';
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('file-list');
+            const btn = document.getElementById('upload-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const count = document.getElementById('file-count');
+
+            if (selectedFiles.length === 0) {
+                list.style.display = 'none';
+                btn.disabled = true;
+                clearBtn.style.display = 'none';
+                count.textContent = '';
+                return;
+            }
+
+            list.style.display = 'block';
+            btn.disabled = !document.getElementById('project-name').value.trim();
+            clearBtn.style.display = 'inline-flex';
+
+            const totalSize = selectedFiles.reduce((s, f) => s + f.size, 0);
+            count.textContent = `${selectedFiles.length} files · ${(totalSize / 1024).toFixed(1)} KB`;
+
+            list.innerHTML = selectedFiles.map((f, i) => `
+                <div class="file-item">
+                    <span>📄 ${escapeHtml(f.name)}</span>
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <span class="file-size">${(f.size / 1024).toFixed(1)} KB</span>
+                        <button class="file-remove" onclick="removeFile(${i})">✕</button>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Enable upload button when project name is typed
+        document.addEventListener('input', (e) => {
+            if (e.target.id === 'project-name') {
+                document.getElementById('upload-btn').disabled =
+                    !e.target.value.trim() || selectedFiles.length === 0;
+            }
+        });
+
+        async function uploadCodebase() {
+            const name = document.getElementById('project-name').value.trim();
+            const desc = document.getElementById('project-desc').value.trim();
+
+            if (!name || selectedFiles.length === 0) return;
+
+            // Show progress
+            const overlay = document.createElement('div');
+            overlay.className = 'progress-overlay';
+            overlay.innerHTML = `
+                <div class="progress-box">
+                    <div class="progress-spinner"></div>
+                    <h3>Uploading & Indexing...</h3>
+                    <p class="text-muted" style="font-size:13px;">${selectedFiles.length} files</p>
+                </div>`;
+            document.body.appendChild(overlay);
+
+            const formData = new FormData();
+            formData.append('project_name', name);
+            formData.append('description', desc);
+            selectedFiles.forEach(f => formData.append('files', f));
+
+            try {
+                const res = await fetch('/api/upload/codebase', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                overlay.remove();
+
+                if (data.success) {
+                    // Reset form
+                    document.getElementById('project-name').value = '';
+                    document.getElementById('project-desc').value = '';
+                    clearFiles();
+
+                    // Reload list
+                    await loadCodebases();
+
+                    // Show success
+                    alert(`✅ ${data.message}\n\nLanguages: ${data.languages.join(', ')}\nSize: ${data.total_size_kb} KB`);
+                }
+            } catch (err) {
+                overlay.remove();
+                alert('❌ Upload failed: ' + err.message);
+            }
+        }
+
+        async function loadCodebases() {
+            const grid = document.getElementById('codebases-grid');
+
+            try {
+                const res = await fetch('/api/upload/codebases');
+                const codebases = await res.json();
+
+                if (!codebases.length) {
+                    grid.innerHTML = `
+                        <div class="empty-state" style="grid-column:1/-1;">
+                            <div class="empty-icon">📂</div>
+                            <h3>No codebases uploaded yet</h3>
+                            <p class="text-muted">Upload your first codebase to get AI-powered insights</p>
+                        </div>`;
+                    return;
+                }
+
+                grid.innerHTML = codebases.map((cb, i) => `
+                    <div class="codebase-card animate-in" style="animation-delay:${i * 0.08}s">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <span style="font-size:16px;font-weight:700;">${escapeHtml(cb.project_name)}</span>
+                            <span class="badge active">${cb.status}</span>
+                        </div>
+                        ${cb.description ? `<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">${escapeHtml(cb.description)}</p>` : ''}
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+                            ${cb.languages.map(l => `<span class="tech-tag">${l}</span>`).join('')}
+                        </div>
+                        <div style="display:flex;gap:16px;font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+                            <span>📄 ${cb.file_count} files</span>
+                            <span>💾 ${cb.total_size_kb} KB</span>
+                            <span>🕐 ${timeAgo(cb.uploaded_at)}</span>
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-sm btn-primary" onclick="analyzeCodebase('${cb.id}')">🔍 Analyze</button>
+                            <a href="/static/chatbot.html" class="btn btn-sm btn-secondary">🤖 Ask AI</a>
+                            <button class="btn btn-sm btn-ghost" onclick="deleteCodebase('${cb.id}', '${escapeHtml(cb.project_name)}')">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                grid.innerHTML = `<div class="text-muted" style="grid-column:1/-1;text-align:center;padding:40px;">Could not load codebases</div>`;
+            }
+        }
+
+        async function analyzeCodebase(id) {
+            const overlay = document.createElement('div');
+            overlay.className = 'progress-overlay';
+            overlay.id = 'analyze-overlay';
+            overlay.innerHTML = `
+                <div class="progress-box">
+                    <div class="progress-spinner"></div>
+                    <h3>Analyzing Codebase...</h3>
+                    <p class="text-muted" style="font-size:13px;">Detecting patterns and structure</p>
+                </div>`;
+            document.body.appendChild(overlay);
+
+            try {
+                const res = await fetch(`/api/upload/codebases/${id}/analyze`, { method: 'POST' });
+                const data = await res.json();
+
+                overlay.remove();
+
+                // Show in modal
+                const modal = document.getElementById('modal-overlay');
+                document.getElementById('modal-title').textContent = `Analysis: ${data.project_name}`;
+
+                const langEntries = Object.entries(data.summary.languages);
+                const totalFiles = data.summary.total_files;
+                const langColors = {
+                    'Python': '#3572A5', 'JavaScript': '#f1e05a', 'TypeScript': '#3178c6',
+                    'Go': '#00ADD8', 'JSON': '#555', 'YAML': '#cb171e', 'Markdown': '#083fa1',
+                    'HTML': '#e34c26', 'CSS': '#563d7c', 'Shell': '#89e051', 'Other': '#64748b',
+                    'Text': '#888', 'Docker': '#384d54', 'HCL': '#844FBA'
+                };
+
+                document.getElementById('modal-body').innerHTML = `
+                    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:20px;">
+                        <div style="background:var(--bg-card);padding:14px;border-radius:var(--radius-md);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;">${data.summary.total_files}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">Total Files</div>
+                        </div>
+                        <div style="background:var(--bg-card);padding:14px;border-radius:var(--radius-md);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;">${data.summary.total_size_kb} KB</div>
+                            <div style="font-size:11px;color:var(--text-muted);">Total Size</div>
+                        </div>
+                        <div style="background:var(--bg-card);padding:14px;border-radius:var(--radius-md);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;">${langEntries.length}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">Languages</div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">📊 Language Distribution</h3>
+                    <div class="lang-bar">
+                        ${langEntries.map(([lang, stats]) => `
+                            <div class="lang-bar-segment" style="width:${(stats.count / totalFiles * 100).toFixed(1)}%;background:${langColors[lang] || '#64748b'};" title="${lang}: ${stats.count} files"></div>
+                        `).join('')}
+                    </div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+                        ${langEntries.map(([lang, stats]) => `
+                            <span style="font-size:12px;display:flex;align-items:center;gap:4px;">
+                                <span style="width:10px;height:10px;border-radius:50%;background:${langColors[lang] || '#64748b'};display:inline-block;"></span>
+                                ${lang} (${stats.count})
+                            </span>
+                        `).join('')}
+                    </div>
+
+                    ${data.summary.patterns.length ? `
+                        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">🔍 Detected Patterns</h3>
+                        <div style="margin-bottom:20px;">
+                            ${data.summary.patterns.map(p => `
+                                <span class="pattern-badge">${p.icon} ${p.name} — ${p.detail}</span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <h3 style="font-size:14px;font-weight:600;margin-bottom:8px;">📂 File Tree</h3>
+                    <div class="code-preview">
+                        <pre style="padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--accent-cyan);"><code>${escapeHtml(data.file_tree)}</code></pre>
+                    </div>
+                `;
+
+                modal.classList.add('active');
+            } catch (err) {
+                overlay.remove();
+                alert('❌ Analysis failed: ' + err.message);
+            }
+        }
+
+        async function deleteCodebase(id, name) {
+            if (!confirm(`Delete codebase "${name}"?`)) return;
+            try {
+                await fetch(`/api/upload/codebases/${id}`, { method: 'DELETE' });
+                loadCodebases();
+            } catch (err) {
+                alert('❌ Delete failed');
+            }
+        }
+
+        function closeModal(e) {
+            if (e && e.target !== document.getElementById('modal-overlay')) return;
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        init();
+    </script>
+</body>
+
+</html>

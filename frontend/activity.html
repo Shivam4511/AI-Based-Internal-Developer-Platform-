@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Activity Feed — Real-time view of deployments, PRs, incidents, and code reviews.">
+    <title>IDP Platform — Activity</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+
+<body>
+    <div class="app-layout" id="app"></div>
+    <script src="app.js"></script>
+    <script>
+        const appEl = document.getElementById('app');
+        let allActivity = [];
+
+        async function init() {
+            appEl.innerHTML = renderSidebar('activity') + `
+                <main class="main-content">
+                    <header class="page-header">
+                        <h1>📊 Activity Feed</h1>
+                        <div class="header-actions">
+                            <span class="text-secondary" style="font-size:13px" id="event-count"></span>
+                        </div>
+                    </header>
+                    <div class="page-body">
+                        <div class="filter-bar" id="filter-bar">
+                            <button class="filter-chip active" onclick="filterActivity(this, '')">All Events</button>
+                            <button class="filter-chip" onclick="filterActivity(this, 'deploy')">🚀 Deployments</button>
+                            <button class="filter-chip" onclick="filterActivity(this, 'pr_merged')">🔀 PRs Merged</button>
+                            <button class="filter-chip" onclick="filterActivity(this, 'incident')">🔥 Incidents</button>
+                            <button class="filter-chip" onclick="filterActivity(this, 'code_review')">👁️ Reviews</button>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:24px;">
+                            <div class="stat-card green" style="padding:16px;" id="stat-deploys">
+                                <div style="font-size:18px;margin-bottom:4px;">🚀</div>
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Deployments</div>
+                            </div>
+                            <div class="stat-card purple" style="padding:16px;" id="stat-prs">
+                                <div style="font-size:18px;margin-bottom:4px;">🔀</div>
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">PRs Merged</div>
+                            </div>
+                            <div class="stat-card red" style="padding:16px;" id="stat-incidents">
+                                <div style="font-size:18px;margin-bottom:4px;">🔥</div>
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Incidents</div>
+                            </div>
+                            <div class="stat-card blue" style="padding:16px;" id="stat-reviews">
+                                <div style="font-size:18px;margin-bottom:4px;">👁️</div>
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Code Reviews</div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body" style="padding:8px 12px;">
+                                <div class="activity-list" id="activity-list">
+                                    <div class="text-muted" style="padding:40px;text-align:center;">Loading activity...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>`;
+
+            allActivity = await api.getActivity() || [];
+            document.getElementById('event-count').textContent = `${allActivity.length} events`;
+
+            // Stats
+            const counts = { deploy: 0, pr_merged: 0, incident: 0, code_review: 0 };
+            allActivity.forEach(a => counts[a.type] = (counts[a.type] || 0) + 1);
+
+            document.getElementById('stat-deploys').querySelector('.stat-value').textContent = counts.deploy;
+            document.getElementById('stat-prs').querySelector('.stat-value').textContent = counts.pr_merged;
+            document.getElementById('stat-incidents').querySelector('.stat-value').textContent = counts.incident;
+            document.getElementById('stat-reviews').querySelector('.stat-value').textContent = counts.code_review;
+
+            renderActivity(allActivity);
+        }
+
+        function filterActivity(chip, type) {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const filtered = type ? allActivity.filter(a => a.type === type) : allActivity;
+            renderActivity(filtered);
+        }
+
+        function renderActivity(events) {
+            const list = document.getElementById('activity-list');
+            if (!events.length) {
+                list.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><h3>No events found</h3></div>';
+                return;
+            }
+
+            list.innerHTML = events.map((a, i) => `
+                <div class="activity-item animate-in" style="animation-delay:${i * 0.05}s">
+                    <div class="activity-icon ${a.type}">${getActivityIcon(a.type)}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">
+                            ${escapeHtml(a.title)}
+                            ${getStatusBadge(a.status)}
+                        </div>
+                        <div class="activity-desc">${escapeHtml(a.description)}</div>
+                        <div class="activity-meta">
+                            <span>👤 ${escapeHtml(a.author)}</span>
+                            <span>📦 ${escapeHtml(a.project)}</span>
+                            <span>🕐 ${timeAgo(a.timestamp)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

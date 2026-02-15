@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Codebase Explorer — Browse and search company repositories with code previews.">
+    <title>IDP Platform — Codebase</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+
+<body>
+    <div class="app-layout" id="app"></div>
+
+    <!-- Modal for repo details -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Repository</h2>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        const appEl = document.getElementById('app');
+        let allRepos = [];
+
+        async function init() {
+            appEl.innerHTML = renderSidebar('codebase') + `
+                <main class="main-content">
+                    <header class="page-header">
+                        <h1>📁 Codebase Explorer</h1>
+                        <div class="header-actions">
+                            <span class="text-secondary" style="font-size:13px" id="repo-count"></span>
+                        </div>
+                    </header>
+                    <div class="page-body">
+                        <div class="search-container">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" class="search-input" id="search-input" 
+                                   placeholder="Search repositories by name, language, or framework..." 
+                                   oninput="handleSearch(this.value)">
+                        </div>
+
+                        <div class="filter-bar" id="filter-bar">
+                            <button class="filter-chip active" onclick="filterByLang(this, '')">All</button>
+                            <button class="filter-chip" onclick="filterByLang(this, 'Python')">🐍 Python</button>
+                            <button class="filter-chip" onclick="filterByLang(this, 'JavaScript')">🟨 JavaScript</button>
+                            <button class="filter-chip" onclick="filterByLang(this, 'TypeScript')">🔷 TypeScript</button>
+                            <button class="filter-chip" onclick="filterByLang(this, 'Go')">🔵 Go</button>
+                            <button class="filter-chip" onclick="filterByLang(this, 'HCL')">🟣 HCL</button>
+                        </div>
+
+                        <!-- Stats Bar -->
+                        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:24px;">
+                            <div class="stat-card blue" style="padding:16px;" id="stat-repos">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Repositories</div>
+                            </div>
+                            <div class="stat-card green" style="padding:16px;" id="stat-loc">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Total LOC</div>
+                            </div>
+                            <div class="stat-card purple" style="padding:16px;" id="stat-contributors">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Contributors</div>
+                            </div>
+                            <div class="stat-card cyan" style="padding:16px;" id="stat-coverage">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Avg Coverage</div>
+                            </div>
+                        </div>
+
+                        <div class="repo-grid" id="repo-grid">
+                            <div class="text-muted" style="padding:40px;text-align:center;grid-column:1/-1;">Loading repositories...</div>
+                        </div>
+                    </div>
+                </main>`;
+
+            // Fetch repos
+            allRepos = await api.getCodebase() || [];
+            document.getElementById('repo-count').textContent = `${allRepos.length} repositories`;
+
+            // Stats
+            const totalLoc = allRepos.reduce((s, r) => s + r.lines_of_code, 0);
+            const totalContrib = new Set(allRepos.flatMap(r => Array(r.contributors).fill(0).map((_, i) => r.name + i))).size;
+            const avgCoverage = (allRepos.filter(r => r.test_coverage > 0).reduce((s, r) => s + r.test_coverage, 0) / allRepos.filter(r => r.test_coverage > 0).length).toFixed(1);
+
+            document.getElementById('stat-repos').querySelector('.stat-value').textContent = allRepos.length;
+            document.getElementById('stat-loc').querySelector('.stat-value').textContent = formatNumber(totalLoc);
+            document.getElementById('stat-contributors').querySelector('.stat-value').textContent = allRepos.reduce((s, r) => s + r.contributors, 0);
+            document.getElementById('stat-coverage').querySelector('.stat-value').textContent = avgCoverage + '%';
+
+            renderRepos(allRepos);
+        }
+
+        let currentFilter = '';
+
+        function handleSearch(query) {
+            const filtered = allRepos.filter(r => {
+                const matchQuery = !query ||
+                    r.name.toLowerCase().includes(query.toLowerCase()) ||
+                    r.language.toLowerCase().includes(query.toLowerCase()) ||
+                    r.framework.toLowerCase().includes(query.toLowerCase()) ||
+                    r.description.toLowerCase().includes(query.toLowerCase());
+                const matchLang = !currentFilter || r.language === currentFilter;
+                return matchQuery && matchLang;
+            });
+            renderRepos(filtered);
+        }
+
+        function filterByLang(chip, lang) {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            currentFilter = lang;
+            handleSearch(document.getElementById('search-input').value);
+        }
+
+        function renderRepos(repos) {
+            const grid = document.getElementById('repo-grid');
+            if (!repos.length) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">🔍</div><h3>No repositories found</h3><p class="text-muted">Try a different search or filter</p></div>';
+                return;
+            }
+            grid.innerHTML = repos.map((r, i) => `
+                <div class="repo-card animate-in" style="animation-delay:${i * 0.05}s" onclick="openRepo('${r.name}')">
+                    <div class="repo-header">
+                        <div class="repo-lang-dot" style="background:${getLanguageColor(r.language)}"></div>
+                        <span class="repo-name">${escapeHtml(r.name)}</span>
+                    </div>
+                    <div class="repo-desc">${escapeHtml(r.description)}</div>
+                    <div class="repo-stats">
+                        <span>💻 ${r.language}</span>
+                        <span>📏 ${formatNumber(r.lines_of_code)} LOC</span>
+                        <span>👥 ${r.contributors}</span>
+                        <span>🔀 ${r.open_prs} PRs</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-light);">
+                        <div style="font-size:12px;color:var(--text-muted);">
+                            🕐 ${timeAgo(r.last_commit)} · ${r.branch_count} branches
+                        </div>
+                        <div>
+                            ${r.test_coverage > 0 ? `
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div class="repo-bar" style="width:80px;">
+                                    <div class="repo-bar-fill" style="width:${r.test_coverage}%;background:${r.test_coverage > 80 ? 'var(--accent-green)' : r.test_coverage > 60 ? 'var(--accent-amber)' : 'var(--accent-red)'}"></div>
+                                </div>
+                                <span style="font-size:11px;color:var(--text-muted);">${r.test_coverage}%</span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function openRepo(name) {
+            const repo = await api.getRepo(name);
+            if (!repo) return;
+
+            const modal = document.getElementById('modal-overlay');
+            document.getElementById('modal-title').textContent = repo.name;
+
+            let filesHtml = '';
+            if (repo.sample_files && Object.keys(repo.sample_files).length > 0) {
+                filesHtml = Object.entries(repo.sample_files).map(([fname, code]) => `
+                    <div class="code-preview">
+                        <div class="code-header">
+                            <span>📄 ${escapeHtml(fname)}</span>
+                            <button class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText(this.closest('.code-preview').querySelector('code').textContent)" style="font-size:11px;padding:2px 8px;">📋 Copy</button>
+                        </div>
+                        <pre><code>${escapeHtml(code.trim())}</code></pre>
+                    </div>
+                `).join('');
+            } else {
+                filesHtml = '<div class="text-muted" style="text-align:center;padding:20px;">No sample files available for this repository.</div>';
+            }
+
+            document.getElementById('modal-body').innerHTML = `
+                <p style="color:var(--text-secondary);margin-bottom:20px;">${escapeHtml(repo.description)}</p>
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); gap:12px; margin-bottom:20px;">
+                    <div style="background:var(--bg-card);padding:12px;border-radius:var(--radius-md);text-align:center;">
+                        <div style="font-size:20px;font-weight:700;">${formatNumber(repo.lines_of_code)}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Lines of Code</div>
+                    </div>
+                    <div style="background:var(--bg-card);padding:12px;border-radius:var(--radius-md);text-align:center;">
+                        <div style="font-size:20px;font-weight:700;">${repo.contributors}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Contributors</div>
+                    </div>
+                    <div style="background:var(--bg-card);padding:12px;border-radius:var(--radius-md);text-align:center;">
+                        <div style="font-size:20px;font-weight:700;">${repo.test_coverage}%</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Coverage</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+                    <span class="tech-tag">${repo.language}</span>
+                    <span class="tech-tag">${repo.framework}</span>
+                    <span class="tech-tag">${repo.branch_count} branches</span>
+                    <span class="tech-tag">${repo.open_prs} open PRs</span>
+                </div>
+                <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">📂 Sample Files</h3>
+                ${filesHtml}
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal(e) {
+            if (e && e.target !== document.getElementById('modal-overlay')) return;
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        init();
+    </script>
+</body>
+
+</html>

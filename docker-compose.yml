@@ -1,0 +1,13 @@
+services:
+  idp-chatbot:
+    build: .
+    container_name: idp-chatbot-container
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

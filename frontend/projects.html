@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Projects Dashboard — View and manage all company microservices and applications.">
+    <title>IDP Platform — Projects</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+</head>
+
+<body>
+    <div class="app-layout" id="app"></div>
+    <script src="app.js"></script>
+    <script>
+        const appEl = document.getElementById('app');
+        let allProjects = [];
+
+        async function init() {
+            appEl.innerHTML = renderSidebar('projects') + `
+                <main class="main-content">
+                    <header class="page-header">
+                        <h1>📦 Projects</h1>
+                        <div class="header-actions">
+                            <a href="/static/chatbot.html" class="btn btn-sm btn-primary">🤖 Scaffold New Project</a>
+                        </div>
+                    </header>
+                    <div class="page-body">
+                        <div class="filter-bar" id="filter-bar">
+                            <button class="filter-chip active" onclick="filterProjects(this, '')">All</button>
+                            <button class="filter-chip" onclick="filterProjects(this, 'active')">🟢 Active</button>
+                            <button class="filter-chip" onclick="filterProjects(this, 'staging')">🟡 Staging</button>
+                            <button class="filter-chip" onclick="filterProjects(this, 'maintenance')">⚪ Maintenance</button>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom:24px;">
+                            <div class="stat-card blue" style="padding:16px;" id="stat-total">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Total Projects</div>
+                            </div>
+                            <div class="stat-card green" style="padding:16px;" id="stat-active">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Active</div>
+                            </div>
+                            <div class="stat-card amber" style="padding:16px;" id="stat-staging">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Staging</div>
+                            </div>
+                            <div class="stat-card purple" style="padding:16px;" id="stat-deploys">
+                                <div class="stat-value" style="font-size:24px;">—</div>
+                                <div class="stat-label">Total Deploys</div>
+                            </div>
+                        </div>
+
+                        <div class="projects-grid" id="projects-grid">
+                            <div class="text-muted" style="padding:40px;text-align:center;grid-column:1/-1;">Loading projects...</div>
+                        </div>
+                    </div>
+                </main>`;
+
+            allProjects = await api.getProjects() || [];
+
+            // Stats
+            document.getElementById('stat-total').querySelector('.stat-value').textContent = allProjects.length;
+            document.getElementById('stat-active').querySelector('.stat-value').textContent = allProjects.filter(p => p.status === 'active').length;
+            document.getElementById('stat-staging').querySelector('.stat-value').textContent = allProjects.filter(p => p.status === 'staging').length;
+            document.getElementById('stat-deploys').querySelector('.stat-value').textContent = allProjects.reduce((s, p) => s + p.deploy_count, 0);
+
+            renderProjects(allProjects);
+        }
+
+        function filterProjects(chip, status) {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            const filtered = status ? allProjects.filter(p => p.status === status) : allProjects;
+            renderProjects(filtered);
+        }
+
+        function renderProjects(projects) {
+            const grid = document.getElementById('projects-grid');
+            if (!projects.length) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📦</div><h3>No projects found</h3></div>';
+                return;
+            }
+
+            grid.innerHTML = projects.map((p, i) => `
+                <div class="project-card animate-in" style="animation-delay:${i * 0.08}s">
+                    <div class="project-header">
+                        <span class="project-name">${escapeHtml(p.name)}</span>
+                        ${getStatusBadge(p.status)}
+                    </div>
+                    <div class="project-desc">${escapeHtml(p.description)}</div>
+                    <div class="tech-tags">
+                        ${p.tech_stack.map(t => `<span class="tech-tag">${escapeHtml(t)}</span>`).join('')}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                        <span style="font-size:12px;color:var(--text-muted);">Health:</span>
+                        ${getStatusBadge(p.health)}
+                    </div>
+                    <div class="project-meta">
+                        <span>👤 ${escapeHtml(p.team_lead)}</span>
+                        <span>👥 ${p.team_size}</span>
+                    </div>
+                    <div class="project-meta" style="margin-top:8px;">
+                        <span>🚀 ${p.deploy_count} deploys</span>
+                        <span>🕐 ${timeAgo(p.last_deploy)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

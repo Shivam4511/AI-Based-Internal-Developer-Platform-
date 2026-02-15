@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDP Platform — AI Architect</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .hero-simple {
+            text-align: center;
+            padding: 60px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-simple h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: var(--gradient-text);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 16px;
+        }
+
+        .hero-simple p {
+            font-size: 18px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .upload-container {
+            max-width: 700px;
+            margin: 0 auto 60px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-primary);
+            border-radius: var(--radius-xl);
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            background: var(--bg-card);
+            position: relative;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.05);
+            box-shadow: var(--shadow-glow-blue);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 24px;
+            display: block;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* Codebase Cards */
+        .codebase-list {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            gap: 16px;
+        }
+
+        .codebase-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-normal);
+        }
+
+        .codebase-item:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .interact-btn {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .interact-btn:hover {
+            opacity: 0.9;
+        }
+
+        .file-preview-list {
+            margin-top: 20px;
+            text-align: left;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: 10px;
+            display: none;
+        }
+
+        .file-preview-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', monospace;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .file-preview-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Simplified Layout: No Sidebar -->
+    <div style="min-height: 100vh; background: var(--bg-primary);">
+
+        <header
+            style="padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); background: rgba(5, 10, 20, 0.8); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100;">
+            <div style="display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px;">
+                <span style="font-size: 24px;">⚡</span> IDP Platform
+            </div>
+            <a href="/static/chatbot.html" class="interact-btn"
+                style="background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-primary);">
+                💬 Go to Chat
+            </a>
+        </header>
+
+        <main style="padding: 20px;">
+
+            <div class="hero-simple">
+                <h1>AI-Powered Architect</h1>
+                <p>
+                    Transform your development workflow. Upload your codebase, analyze architecture,
+                    and generate production-ready code with context-aware AI.
+                </p>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-container">
+                <div class="card" style="padding: 0; overflow: hidden;">
+                    <div
+                        style="padding: 24px; border-bottom: 1px solid var(--border-light); background: var(--bg-secondary);">
+                        <h2 style="margin: 0; font-size: 18px;">🚀 Upload Codebase</h2>
+                    </div>
+                    <div style="padding: 32px;">
+
+                        <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                            <div style="flex: 1;">
+                                <label
+                                    style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Project
+                                    Name</label>
+                                <input type="text" id="project-name" placeholder="e.g. my-notification-service"
+                                    style="width: 100%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-light); background: var(--bg-input); color: white;">
+                            </div>
+                        </div>
+
+                        <div class="upload-zone" id="upload-zone">
+                            <input type="file" id="file-input" multiple onchange="handleFileSelect(event)">
+                            <span class="upload-icon">📂</span>
+                            <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Drag & Drop Project Files
+                            </h3>
+                            <p style="color: var(--text-secondary); font-size: 14px;">
+                                Python, JS, TS, Go, Java, HTML, CSS, JSON...
+                            </p>
+                        </div>
+
+                        <div class="file-preview-list" id="file-list"></div>
+
+                        <button id="upload-btn" onclick="uploadCodebase()" class="interact-btn"
+                            style="width: 100%; justify-content: center; margin-top: 24px; padding: 14px;" disabled>
+                            📤 Upload & Index Codebase
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Existing Codebases -->
+            <div class="hero-simple" style="padding: 0; margin-bottom: 20px; text-align: left; max-width: 800px;">
+                <h3 style="font-size: 20px;">📚 Your Projects</h3>
+            </div>
+
+            <div id="codebase-list" class="codebase-list">
+                <!-- Populated via JS -->
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    Loading projects...
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Simple Script for Upload & Listing -->
+    <script src="app.js"></script>
+    <script>
+        let selectedFiles = [];
+
+        async function init() {
+            loadCodebases();
+            setupDragDrop();
+        }
+
+        function setupDragDrop() {
+            const zone = document.getElementById('upload-zone');
+            zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) addFiles(Array.from(e.dataTransfer.files));
+            });
+        }
+
+        function handleFileSelect(e) {
+            addFiles(Array.from(e.target.files));
+        }
+
+        function addFiles(files) {
+            selectedFiles = [...selectedFiles, ...files];
+            renderFileList();
+        }
+
+        function renderFileList() {
+            const list = document.getElementById('file-list');
+            const btn = document.getElementById('upload-btn');
+            const name = document.getElementById('project-name').value;
+
+            if (selectedFiles.length === 0) {
+                list.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+
+            list.style.display = 'block';
+            btn.disabled = !name;
+
+            list.innerHTML = selectedFiles.map(f => `
+                <div class="file-preview-item">
+                    <span>${f.name}</span>
+                    <span style="color: var(--text-muted);">${(f.size / 1024).toFixed(1)} KB</span>
+                </div>
+            `).join('');
+
+            // Limit preview to 5 items
+            if (selectedFiles.length > 5) {
+                list.innerHTML += `<div style="padding: 8px; text-align: center; color: var(--text-muted); font-size: 12px;">+ ${selectedFiles.length - 5} more files</div>`;
+            }
+        }
+
+        document.getElementById('project-name').addEventListener('input', renderFileList);
+
+        async function uploadCodebase() {
+            const name = document.getElementById('project-name').value;
+            if (!name || !selectedFiles.length) return;
+
+            const btn = document.getElementById('upload-btn');
+            btn.innerHTML = '⏳ Uploading...';
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('project_name', name);
+            selectedFiles.forEach(f => formData.append('files', f));
+
+            try {
+                const res = await fetch('/api/upload/codebase', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                if (data.success) {
+                    // Reset
+                    selectedFiles = [];
+                    document.getElementById('project-name').value = '';
+                    renderFileList();
+                    btn.innerHTML = '📤 Upload & Index Codebase';
+
+                    // Reload list
+                    loadCodebases();
+
+                    // Option to go to chat immediately
+                    if (confirm('Upload complete! Go to Chat now?')) {
+                        window.location.href = `/static/chatbot.html?codebase=${data.codebase_id}`;
+                    }
+                }
+            } catch (err) {
+                alert('Upload failed');
+                btn.innerHTML = '❌ Error';
+            }
+        }
+
+        async function loadCodebases() {
+            const container = document.getElementById('codebase-list');
+            try {
+                const res = await fetch('/api/upload/codebases');
+                const list = await res.json();
+
+                if (list.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted); border: 1px dashed var(--border-light); border-radius: var(--radius-lg);">No projects found. Upload one above!</div>`;
+                    return;
+                }
+
+                container.innerHTML = list.map(cb => `
+                    <div class="codebase-item">
+                        <div>
+                            <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">${cb.project_name}</div>
+                            <div style="font-size: 13px; color: var(--text-secondary);">
+                                ${cb.file_count} files · ${(cb.total_size_kb).toFixed(1)} KB · ${cb.languages.slice(0, 3).join(', ')}
+                            </div>
+                        </div>
+                        <a href="/static/chatbot.html?codebase=${cb.id}" class="interact-btn">
+                            💬 Interact
+                        </a>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = 'Error loading projects';
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

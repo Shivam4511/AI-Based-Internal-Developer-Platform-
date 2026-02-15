@@ -1,0 +1,101 @@
+{
+  "cb-001": {
+    "id": "cb-001",
+    "project_name": "mock",
+    "description": "",
+    "files": {
+      "package.json": {
+        "content": "{\n  \"name\": \"mock-express-api\",\n  \"version\": \"1.0.0\",\n  \"main\": \"server.js\",\n  \"dependencies\": {\n    \"express\": \"^4.18.2\",\n    \"dotenv\": \"^16.0.3\",\n    \"cors\": \"^2.8.5\"\n  },\n  \"scripts\": {\n    \"start\": \"node server.js\"\n  }\n}",
+        "size": 224,
+        "type": "JSON"
+      },
+      "server.js": {
+        "content": "require('dotenv').config();\nconst express = require('express');\nconst cors = require('cors');\nconst authRoutes = require('./routes/auth');\nconst users = require('./data/users.json');\nconst path = require('path');\n\nconst app = express();\napp.use(cors());\napp.use(express.json());\napp.use(express.static(path.join(__dirname, '.')));\n\napp.use('/api/auth', authRoutes);\n\napp.get('/', (req, res) => {\n  res.sendFile(path.join(__dirname, 'index.html'));\n});\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`Server running on port ${PORT}`);\n});\n",
+        "size": 570,
+        "type": "JavaScript"
+      },
+      "routes/auth.js": {
+        "content": "const express = require('express');\nconst router = express.Router();\nconst users = require('../data/users.json');\n\nrouter.post('/login', (req, res) => {\n  const { username, password } = req.body;\n  const user = users.find(u => u.username === username);\n  if (user && user.password === password) {\n    return res.json({ token: 'mock-jwt-token-123' });\n  }\n  res.status(401).json({ error: 'Invalid credentials' });\n});\n\nmodule.exports = router;",
+        "size": 442,
+        "type": "JavaScript"
+      },
+      ".env.example": {
+        "content": "PORT=3000\nJWT_SECRET=secret_key\n",
+        "size": 32,
+        "type": "Other"
+      },
+      "README.md": {
+        "content": "# Mock Express API\n\nThis is a sample project generated to test the IDP Platform upload feature.\nIt contains a simple Express server with a mock auth route.\n\n## Usage\n1. Upload this codebase.\n2. Ask the AI to \"Add a registration route\" or \"explain the auth flow\".\n",
+        "size": 263,
+        "type": "Markdown"
+      },
+      "data/users.json": {
+        "content": "[\n  {\n    \"id\": 1,\n    \"username\": \"admin\",\n    \"email\": \"admin@example.com\",\n    \"password\": \"password\"\n  },\n  {\n    \"id\": 2,\n    \"username\": \"user1\",\n    \"email\": \"user1@example.com\",\n    \"password\": \"password1\"\n  },\n  {\n    \"id\": 3,\n    \"username\": \"user2\",\n    \"email\": \"user2@example.com\",\n    \"password\": \"password2\"\n  }\n]",
+        "size": 328,
+        "type": "JSON"
+      },
+      "index.html": {
+        "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Mock API Frontend</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n        }\n    </style>\n</head>\n<body>\n    <h1>Mock API Frontend</h1>\n    <form id=\"login-form\">\n        <label for=\"username\">Username:</label><br>\n        <input type=\"text\" id=\"username\" name=\"username\"><br>\n        <label for=\"password\">Password:</label><br>\n        <input type=\"password\" id=\"password\" name=\"password\"><br>\n        <input type=\"submit\" value=\"Login\">\n    </form>\n    <div id=\"result\"></div>\n    <script>\n        const form = document.getElementById('login-form');\n        form.addEventListener('submit', async (e) => {\n            e.preventDefault();\n            const username = document.getElementById('username').value;\n            const password = document.getElementById('password').value;\n            try {\n                const response = await fetch('/api/auth/login', {\n                    method: 'POST',\n                    headers: {\n                        'Content-Type': 'application/json'\n                    },\n                    body: JSON.stringify({ username, password })\n                });\n                const data = await response.json();\n                if (response.ok) {\n                    document.getElementById('result').innerText = `Login successful. Token: ${data.token}`;\n                } else {\n                    document.getElementById('result').innerText = `Error: ${data.error}`;\n                }\n            } catch (error) {\n                console.error(error);\n            }\n        });\n    </script>\n</body>\n</html>",
+        "size": 1735,
+        "type": "HTML"
+      }
+    },
+    "file_count": 5,
+    "total_size": 1267,
+    "languages": [
+      "JavaScript",
+      "JSON",
+      "Markdown",
+      "Other"
+    ],
+    "uploaded_at": "2026-02-13T12:30:58.393107",
+    "status": "modified"
+  },
+  "cb-002": {
+    "id": "cb-002",
+    "project_name": "mock1",
+    "description": "",
+    "files": {
+      "package.json": {
+        "content": "{\n  \"name\": \"mock-express-api\",\n  \"version\": \"1.0.0\",\n  \"main\": \"server.js\",\n  \"dependencies\": {\n    \"express\": \"^4.18.2\",\n    \"dotenv\": \"^16.0.3\",\n    \"cors\": \"^2.8.5\"\n  },\n  \"scripts\": {\n    \"start\": \"node server.js\"\n  }\n}",
+        "size": 224,
+        "type": "JSON"
+      },
+      "server.js": {
+        "content": "require('dotenv').config();\nconst express = require('express');\nconst cors = require('cors');\nconst authRoutes = require('./routes/auth');\nconst path = require('path');\n\nconst app = express();\napp.use(cors());\napp.use(express.json());\napp.use(express.static(path.join(__dirname, '.')));\n\napp.use('/api/auth', authRoutes);\n\napp.get('/', (req, res) => {\n  res.sendFile(path.join(__dirname, 'index.html'));\n});\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`Server running on port ${PORT}`);\n});\n",
+        "size": 526,
+        "type": "JavaScript"
+      },
+      "routes/auth.js": {
+        "content": "const express = require('express');\nconst router = express.router();\n\nrouter.post('/login', (req, res) => {\n  const { username, password } = req.body;\n  if (username === 'admin' && password === 'password') {\n    return res.json({ token: 'mock-jwt-token-123' });\n  }\n  res.status(401).json({ error: 'Invalid credentials' });\n});\n\nmodule.exports = router;\n",
+        "size": 354,
+        "type": "JavaScript"
+      },
+      ".env.example": {
+        "content": "PORT=3000\nJWT_SECRET=secret_key\n",
+        "size": 32,
+        "type": "Other"
+      },
+      "README.md": {
+        "content": "# Mock Express API\n\nThis is a sample project generated to test the IDP Platform upload feature.\nIt contains a simple Express server with a mock auth route.\n\n## Usage\n1. Upload this codebase.\n2. Ask the AI to \"Add a registration route\" or \"explain the auth flow\".\n",
+        "size": 263,
+        "type": "Markdown"
+      },
+      "index.html": {
+        "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Mock API Frontend</title>\n    <style>\n        body {\n            font-family: Arial, sans-serif;\n        }\n        form {\n            width: 50%;\n            margin: 40px auto;\n            padding: 20px;\n            border: 1px solid #ccc;\n            border-radius: 10px;\n            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);\n        }\n        label {\n            display: block;\n            margin-bottom: 10px;\n        }\n        input {\n            width: 100%;\n            height: 40px;\n            margin-bottom: 20px;\n            padding: 10px;\n            border: 1px solid #ccc;\n        }\n        button {\n            width: 100%;\n            height: 40px;\n            background-color: #4CAF50;\n            color: #fff;\n            padding: 10px;\n            border: none;\n            border-radius: 5px;\n            cursor: pointer;\n        }\n        button:hover {\n            background-color: #3e8e41;\n        }\n    </style>\n</head>\n<body>\n    <form id=\"login-form\">\n        <label for=\"username\">Username:</label>\n        <input type=\"text\" id=\"username\" name=\"username\"><br><br>\n        <label for=\"password\">Password:</label>\n        <input type=\"password\" id=\"password\" name=\"password\"><br><br>\n        <button type=\"submit\">Login</button>\n    </form>\n    <div id=\"result\"></div>\n\n    <script>\n        const form = document.getElementById('login-form');\n        form.addEventListener('submit', async (e) => {\n            e.preventDefault();\n            const username = document.getElementById('username').value;\n            const password = document.getElementById('password').value;\n            try {\n                const response = await fetch('/api/auth/login', {\n                    method: 'POST',\n                    headers: {\n                        'Content-Type': 'application/json'\n                    },\n                    body: JSON.stringify({ username, password })\n                });\n                const data = await response.json();\n                if (response.ok) {\n                    document.getElementById('result').innerText = `Login successful. Token: ${data.token}`;\n                } else {\n                    document.getElementById('result').innerText = data.error;\n                }\n            } catch (error) {\n                console.error(error);\n            }\n        });\n    </script>\n</body>\n</html>",
+        "size": 2511,
+        "type": "HTML"
+      }
+    },
+    "file_count": 5,
+    "total_size": 1267,
+    "languages": [
+      "Other",
+      "JSON",
+      "Markdown",
+      "JavaScript"
+    ],
+    "uploaded_at": "2026-02-13T12:45:50.166658",
+    "status": "modified"
+  }
+}
